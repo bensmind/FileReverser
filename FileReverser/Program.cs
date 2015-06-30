@@ -11,8 +11,7 @@ namespace FileReverser
     class Program
     {
             /// <summary>
-    /// Your mission should you choose to accept it:
-    /// Write a program that will efficiently reverse the lines of a file.  As an example, if this is the input file
+        ///efficiently reverse the lines of a file.  As an example, if this is the input file
     /// line 1
     /// line 2
     /// line 3
@@ -25,21 +24,6 @@ namespace FileReverser
     /// line 3
     /// line 2
     /// line 1
-    ///
-    /// The text of each line should remain the same (i.e. don't reverse the text on the line), just the order of the lines should be reversed.
-    ///
-    /// The sample command line program below will create 4 sample file of roughly the following size:
-    /// 1M
-    /// 10M
-    /// 100M
-    /// 500M
-    ///
-    /// Your program should be able to handle all 4 files without melting the CPU or running out of memory.
-    /// Your program should at no time exceed 1G of memory used (bonus points for keeping it under 100M)
-    ///
-    /// You can assume that the file is ASCII encoded. (if you'd like to attempt a much more advanced version, solve for UTF-8 encoding)
-    ///
-    /// You may use help from the internet, but the work must be yours and must not come from anyone else.
     /// </summary>
 
         private const string OutputDir = @"C:\FileReverser";
@@ -55,12 +39,12 @@ namespace FileReverser
             Console.WriteLine("Press Enter to start"); Console.ReadLine();
 
             Directory.CreateDirectory(OutputDir);
-            var fileName1M = Path.Combine(OutputDir, string.Format("VerifyBrandSampleFile_{0:yyyyMMdd_hhmmss}_1m.txt", DateTime.Now));
-            var fileName10M = Path.Combine(OutputDir, string.Format("VerifyBrandSampleFile_{0:yyyyMMdd_hhmmss}_10m.txt", DateTime.Now));
-            var fileName100M = Path.Combine(OutputDir, string.Format("VerifyBrandSampleFile_{0:yyyyMMdd_hhmmss}_100m.txt", DateTime.Now));
-            var fileName500M = Path.Combine(OutputDir, string.Format("VerifyBrandSampleFile_{0:yyyyMMdd_hhmmss}_500m.txt", DateTime.Now));
-            //var fileName1G = Path.Combine(OutputDir, string.Format("VerifyBrandSampleFile_{0:yyyyMMdd_hhmmss}_1g.txt", DateTime.Now));
-            //var fileName5G = Path.Combine(OutputDir, string.Format("VerifyBrandSampleFile_{0:yyyyMMdd_hhmmss}_5g.txt", DateTime.Now));
+            var fileName1M = Path.Combine(OutputDir, string.Format("File_{0:yyyyMMdd_hhmmss}_1m.txt", DateTime.Now));
+            var fileName10M = Path.Combine(OutputDir, string.Format("File_{0:yyyyMMdd_hhmmss}_10m.txt", DateTime.Now));
+            var fileName100M = Path.Combine(OutputDir, string.Format("File_{0:yyyyMMdd_hhmmss}_100m.txt", DateTime.Now));
+            var fileName500M = Path.Combine(OutputDir, string.Format("File_{0:yyyyMMdd_hhmmss}_500m.txt", DateTime.Now));
+            //var fileName1G = Path.Combine(OutputDir, string.Format("File_{0:yyyyMMdd_hhmmss}_1g.txt", DateTime.Now));
+            //var fileName5G = Path.Combine(OutputDir, string.Format("File_{0:yyyyMMdd_hhmmss}_5g.txt", DateTime.Now));
 
             CreateFile(fileName1M, NumberOfLinesfor1MFile);
             CreateFile(fileName10M, NumberOfLinesfor1MFile * 10);
