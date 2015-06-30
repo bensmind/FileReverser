@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 
 namespace FileReverser
 {
@@ -15,8 +14,7 @@ namespace FileReverser
         private static readonly Random Random = new Random();
         private const int DiskReadBufferSize = 16384;//8192;
         private const int DiskWriteBufferSize = 8192;//4096;
-        private static readonly int utf8Mask = 1 << 7;
-        private static bool IncludeUTFTestData = false; //note this makes it run quite a bit slower because each of the non-ascii codes are mutli-byte
+        private static readonly bool IncludeUTFTestData = false; //note this makes it run quite a bit slower because each of the non-ascii codes are mutli-byte
 
         
         static void Main(string[] args)
@@ -58,7 +56,7 @@ namespace FileReverser
         {
             Console.WriteLine("Reversing file {0}", fileInfo.Name);
             var stopwatch = Stopwatch.StartNew();
-            List<long> offsets = GetLineOffsetsRead(fileInfo, readBufferSize);
+            var offsets = GetLineOffsetsRead(fileInfo, readBufferSize);
             //offsets = GetLineOffsetsEnumerable(fileInfo, readBufferSize);
             DoReverse(fileInfo, offsets, readBufferSize, writeBufferSize);
             Console.WriteLine("Took: {0}", stopwatch.Elapsed);
@@ -75,9 +73,9 @@ namespace FileReverser
             {
                 for(var sIndex = 1; sIndex < offsets.Count; sIndex++)
                 {
-                    long start = offsets[sIndex];
-                    int count = (int)(end - start);
-                    byte[] lineBuffer = new byte[count];
+                    var start = offsets[sIndex];
+                    var count = (int)(end - start);
+                    var lineBuffer = new byte[count];
                     reader.Seek(start, SeekOrigin.Begin);
                     reader.Read(lineBuffer, 0, count);
                     writer.Write(lineBuffer, 0, count);
@@ -86,76 +84,20 @@ namespace FileReverser
             }
         }
 
-        private static List<long> GetLineOffsetsReadByte(FileInfo fileInfo, int bufferSize)
-        {
-            var offsets = new List<long> {0};
-            using (var reader = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.None, bufferSize, FileOptions.RandomAccess))
-            {
-                int value;
-                byte last = 0;
-                while ((value = reader.ReadByte()) > 0)
-                {
-                    byte b = (byte)value;
-#if DEBUG
-                    if ((b & utf8Mask) != 0) //this is the flag for multibyte codes, all bytes of a multibyte code have the highest bit set
-                    {
-                        Debug.Assert(b != 10 && b != 13);
-                        continue;
-                    }
-#endif
-                    if (b == 10)
-                    {
-                        offsets.Add(reader.Position);
-                    }
-                    else if (last == 13)
-                    {
-                        offsets.Add(reader.Position-1);
-                    }
-                    last = b;
-                }
-                offsets.Add(reader.Position);
-            }
-            return offsets;
-        }
-
-        private static List<long> GetLineOffsetsEnumerable(FileInfo fileInfo, int bufferSize)
-        {
-            var offsets = new List<long> { 0 };
-            byte last = 0;
-            long position = 0;
-            foreach (byte b in GetBytes(fileInfo,bufferSize))
-            {
-                position++;
-                
-                if (b == 10)
-                {
-                    offsets.Add(position);
-                }
-                else if (last == 13)
-                {
-                    offsets.Add(position - 1);
-                }
-                last = b;
-            }
-            offsets.Add(position);
-            
-            return offsets;
-        }
-
         private static List<long> GetLineOffsetsRead(FileInfo fileInfo, int bufferSize)
         {
             var offsets = new List<long> { 0 };
             long position = 0;
-            byte[] buffer = new byte[bufferSize];
+            var buffer = new byte[bufferSize];
             using (var reader = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.None, bufferSize, FileOptions.RandomAccess))
             {
                 byte last = 0;
                 while (true)
                 {
-                    int bytesRead = reader.Read(buffer, 0, bufferSize);
-                    for (int i = 0; i < bytesRead; i++)
+                    var bytesRead = reader.Read(buffer, 0, bufferSize);
+                    for (var i = 0; i < bytesRead; i++)
                     {
-                        byte b = buffer[i];
+                        var b = buffer[i];
                         position++;
 
                         if (b == 10)
@@ -188,8 +130,8 @@ namespace FileReverser
             {
                 for (var i = 0; i < numberOfLines; i++)
                 {
-                    char letter = Letters[i % Letters.Length];
-                    string line = String.Format("{0} - {1}", i, new string(letter, Random.Next(900, 1200)));
+                    var letter = Letters[i % Letters.Length];
+                    var line = String.Format("{0} - {1}", i, new string(letter, Random.Next(900, 1200)));
                     writer.Write(line);
                     writer.WriteLine();
                 }
@@ -202,26 +144,6 @@ namespace FileReverser
             if (Directory.Exists(OutputDir))
             {
                 Directory.Delete(OutputDir, true);
-            }
-        }
-
-        private static IEnumerable<byte> GetBytes(FileInfo fileInfo, int bufferSize)
-        {
-            byte[] buffer = new byte[bufferSize];
-            using (var reader = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.None, bufferSize, FileOptions.RandomAccess))
-            {
-                while (true)
-                {
-                    int bytesRead = reader.Read(buffer, 0, bufferSize);
-                    for (int i = 0; i < bytesRead; i++)
-                    {
-                        yield return buffer[i];
-                    }
-                    if (bytesRead != bufferSize)
-                    {
-                        yield break;
-                    }
-                }
             }
         }
     }
