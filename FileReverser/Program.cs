@@ -11,16 +11,19 @@ namespace FileReverser
     {
         private const string OutputDir = @"C:\FileReverser";
         private const int NumberOfLinesfor1MFile = 1000;
-        private static readonly char[] Letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
+        private static char[] Letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
         private static readonly Random Random = new Random();
-        private static readonly bool IncludeEmptyLines = false;
         private const int DiskReadBufferSize = 16384;//8192;
         private const int DiskWriteBufferSize = 8192;//4096;
         private static readonly int utf8Mask = 1 << 7;
+        private static bool IncludeUTFTestData = false; //note this makes it run quite a bit slower because each of the non-ascii codes are mutli-byte
+
         
         static void Main(string[] args)
         {
             Console.WriteLine("Press Enter to start"); Console.ReadLine();
+
+            if (IncludeUTFTestData) Letters = Letters.Concat("¥·£·€·$·¢·₡·₢·₣·₤·₥·₦·₧·₨·₩·₪·₫·₭·₮·₯·₹".ToCharArray()).ToArray();
 
             Directory.CreateDirectory(OutputDir);
             
@@ -55,7 +58,8 @@ namespace FileReverser
         {
             Console.WriteLine("Reversing file {0}", fileInfo.Name);
             var stopwatch = Stopwatch.StartNew();
-            List<long> offsets = GetLineOffsets(fileInfo, readBufferSize);
+            List<long> offsets = GetLineOffsetsRead(fileInfo, readBufferSize);
+            //offsets = GetLineOffsetsEnumerable(fileInfo, readBufferSize);
             DoReverse(fileInfo, offsets, readBufferSize, writeBufferSize);
             Console.WriteLine("Took: {0}", stopwatch.Elapsed);
         }
@@ -82,10 +86,9 @@ namespace FileReverser
             }
         }
 
-        private static List<long> GetLineOffsets(FileInfo fileInfo, int bufferSize)
+        private static List<long> GetLineOffsetsReadByte(FileInfo fileInfo, int bufferSize)
         {
             var offsets = new List<long> {0};
-
             using (var reader = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.None, bufferSize, FileOptions.RandomAccess))
             {
                 int value;
@@ -93,18 +96,86 @@ namespace FileReverser
                 while ((value = reader.ReadByte()) > 0)
                 {
                     byte b = (byte)value;
+#if DEBUG
                     if ((b & utf8Mask) != 0) //this is the flag for multibyte codes, all bytes of a multibyte code have the highest bit set
                     {
+                        Debug.Assert(b != 10 && b != 13);
                         continue;
                     }
-                    if (b == 10 || (b == 13 && last != 10))
+#endif
+                    if (b == 10)
                     {
                         offsets.Add(reader.Position);
                     }
+                    else if (last == 13)
+                    {
+                        offsets.Add(reader.Position-1);
+                    }
                     last = b;
                 }
+                offsets.Add(reader.Position);
             }
-            offsets.Add(fileInfo.Length);
+            return offsets;
+        }
+
+        private static List<long> GetLineOffsetsEnumerable(FileInfo fileInfo, int bufferSize)
+        {
+            var offsets = new List<long> { 0 };
+            byte last = 0;
+            long position = 0;
+            foreach (byte b in GetBytes(fileInfo,bufferSize))
+            {
+                position++;
+                
+                if (b == 10)
+                {
+                    offsets.Add(position);
+                }
+                else if (last == 13)
+                {
+                    offsets.Add(position - 1);
+                }
+                last = b;
+            }
+            offsets.Add(position);
+            
+            return offsets;
+        }
+
+        private static List<long> GetLineOffsetsRead(FileInfo fileInfo, int bufferSize)
+        {
+            var offsets = new List<long> { 0 };
+            long position = 0;
+            byte[] buffer = new byte[bufferSize];
+            using (var reader = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.None, bufferSize, FileOptions.RandomAccess))
+            {
+                byte last = 0;
+                while (true)
+                {
+                    int bytesRead = reader.Read(buffer, 0, bufferSize);
+                    for (int i = 0; i < bytesRead; i++)
+                    {
+                        byte b = buffer[i];
+                        position++;
+
+                        if (b == 10)
+                        {
+                            offsets.Add(position);
+                        }
+                        else if (last == 13)
+                        {
+                            offsets.Add(position - 1);
+                        }
+                        last = b;
+                    }
+                    if (bytesRead != bufferSize)
+                    {
+                        break;
+                    }
+                }
+            }
+            offsets.Add(position);
+
             return offsets;
         }
 
@@ -131,6 +202,26 @@ namespace FileReverser
             if (Directory.Exists(OutputDir))
             {
                 Directory.Delete(OutputDir, true);
+            }
+        }
+
+        private static IEnumerable<byte> GetBytes(FileInfo fileInfo, int bufferSize)
+        {
+            byte[] buffer = new byte[bufferSize];
+            using (var reader = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.None, bufferSize, FileOptions.RandomAccess))
+            {
+                while (true)
+                {
+                    int bytesRead = reader.Read(buffer, 0, bufferSize);
+                    for (int i = 0; i < bytesRead; i++)
+                    {
+                        yield return buffer[i];
+                    }
+                    if (bytesRead != bufferSize)
+                    {
+                        yield break;
+                    }
+                }
             }
         }
     }
